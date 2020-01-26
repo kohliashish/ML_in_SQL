@@ -1,0 +1,54 @@
+DECLARE @theta0 int;
+DECLARE @theta1 int;
+DECLARE @theta0_t int;
+DECLARE @theta1_t int;
+DECLARE @var DECIMAL(4,3);
+DECLARE @alpha DECIMAL(4,2);
+
+--Initial values
+SET @theta0 = 0;
+SET @theta1 = 1;
+SET @theta0_t = 1;
+SET @theta1_t = 0;
+SET @alpha = 0.1;
+SET @var = 0.01;
+
+WHILE (@theta0_t NOT BETWEEN @theta0-@var AND @theta0+@var) AND (@theta1_t NOT BETWEEN @theta1-@var AND @theta1+@var)
+BEGIN
+	--Calculating theta0
+	SELECT
+		@theta0_t = @theta0 - (SUM(Outp)/(SELECT COUNT(*) FROM base))*@alpha
+	FROM
+		(
+		SELECT
+			(@theta1*X + @theta0) - Y as Outp
+		FROM base
+		);
+
+	--Calculating theta1
+	SELECT
+		@theta1_t = @theta1 - (SUM(Outp)/(SELECT COUNT(*) FROM base))*@alpha
+	FROM
+		(
+		SELECT
+			((@theta1*X + @theta0) - Y)*X as Outp
+		FROM base
+		);
+	
+	--Comparing thetas
+	IF (@theta0_t BETWEEN @theta0-@var AND @theta0+@var) AND (@theta1_t BETWEEN @theta1-@var AND @theta1+@var)
+	BEGIN
+		SELECT @theta0 = @theta0_t;
+		SELECT @theta1 = @theta1_t;
+		BREAK;
+	END
+	ELSE
+	BEGIN
+		SELECT @theta0 = @theta0_t;
+		SELECT @theta1 = @theta1_t;
+	END
+END
+
+--Finally calculate Hypothesis function using optimal thetas
+SELECT X,Y,@theta0+@theta1*X AS H_theta
+FROM base
